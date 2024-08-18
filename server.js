@@ -1,68 +1,29 @@
- user = new User({ name, email, password });
-    await user.save();
 
-    const payload = {
-      user: {
-        id: user.id,
-      },
-    };
+const express = require("express");
+const mongoose = require("mongoose");
+const dotenv = require("dotenv");
 
-    jwt.sign(
-      payload,
-      process.env.JWT_SECRET,
-      { expiresIn: 360000 },
-      (err, token) => {
-        if (err) throw err;
-        res.json({ token });
-      }
-    );
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Server error");
-  }
-};
+dotenv.config();
 
-exports.loginUser = async (req, res) => {
-  const { email, password } = req.body;
+const app = express();
 
-  try {
-    let user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ msg: "Invalid Credentials" });
-    }
+// Middleware
+app.use(express.json());
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ msg: "Invalid Credentials" });
-    }
+// Routes
+app.use("/api/auth", require("./routes/auth"));
 
-    const payload = {
-      user: {
-        id: user.id,
-      },
-    };
+// Database Connection
+mongoose
+  .connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("MongoDB connected"))
+  .catch((err) => console.log(err));
 
-    jwt.sign(
-      payload,
-      process.env.JWT_SECRET,
-      { expiresIn: 360000 },
-      (err, token) => {
-        if (err) throw err;
-        res.json({ token });
-      }
-    );
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Server error");
-  }
-};
-
-exports.getUser = async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).select("-password");
-    res.json(user);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Server error");
-  }
-};
+// Start the Server
+const PORT = process.env.PORT || 8000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
